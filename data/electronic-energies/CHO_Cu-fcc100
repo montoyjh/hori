@@ -1,0 +1,56 @@
+(dp0
+S'remark'
+p1
+NsS'author'
+p2
+S'AAP'
+p3
+sS'electronic energy'
+p4
+F-60869.111038199997
+sS'vibrations'
+p5
+cnumpy.core.multiarray
+_reconstruct
+p6
+(cnumpy
+ndarray
+p7
+(I0
+tp8
+S'b'
+p9
+tp10
+Rp11
+(I1
+(I9
+tp12
+cnumpy
+dtype
+p13
+(S'c16'
+p14
+I0
+I1
+tp15
+Rp16
+(I3
+S'<'
+p17
+NNNI-1
+I-1
+I0
+tp18
+bI00
+S'\xb4\x0c\xbb\x11\xd34\x88?\x00\x00\x00\x00\x00\x00\x00\x00\x7fj\xc8\xbb]\xee\x8d?\x00\x00\x00\x00\x00\x00\x00\x00\x1dq\x8b\xb5\x05\xad\x91?\x00\x00\x00\x00\x00\x00\x00\x00\xcd0\xc3 \xa7F\x9b?\x00\x00\x00\x00\x00\x00\x00\x00\x97\xed2mj\xaf\xa8?\x00\x00\x00\x00\x00\x00\x00\x00Lb\xe5\xbd\xa8\x8f\xb2?\x00\x00\x00\x00\x00\x00\x00\x00\xc4\x8d\xb9\xb7~\x88\xc3?\x00\x00\x00\x00\x00\x00\x00\x00"3s\xbaMn\xc6?\x00\x00\x00\x00\x00\x00\x00\x00\x8bc"4\xc6d\xd6?\x00\x00\x00\x00\x00\x00\x00\x00'
+p19
+tp20
+bsS'calculation script'
+p21
+S'#!/usr/bin/env python\n\n#PBS -q verylong\n#PBS -r n\n#PBS -l nodes=4:ppn=8\n#PBS -m a\n#PBS -M andypeterson@gmail.com\n#PBS -V\n\nimport numpy as np\nfrom ase import read,view,FixAtoms,QuasiNewton\nfrom ase.calculators.jacapo import Jacapo\nfrom ase.vibrations import Vibrations\n\n\nname = "Cu100_HCO_hollow"\nvibrateatoms = [36,37,38] # For free energy calculation\nfreeatoms = [27,28,29,30,31,32,33,34,35,36,37,38] # For optimization calculation\n\n# Open the slab with adsorbate from an old simulation.\nslab = read(\'HCO_hollow.traj\')\n# Rotate it, to see if we can get rid of the imaginaries.\nslab.rotate(\'z\', np.pi/2., rotate_cell=True)\n\n# Fix the atoms to not be optimized, give the rest random perturbations\n# to break any artificial symmetry.\nmask = [True for atom in slab]\nfor free in freeatoms: # free atoms for optimizer\n    mask[free] = False\nslab.set_constraint(FixAtoms(mask=mask))\n\n# Introduce random perturbations to the free atoms\nslab.rattle(stdev=0.01)\n\ncalc = Jacapo(nc=\'out.nc\', #nc output file\n              pw=340.15, #planewave cutoff\n              dw=500.00, #density cutoff\n              nbands=None, # number of bands\n              kpts=(4,4,1), # k points\n              xc=\'RPBE\', #exchange correlation method\n              ft=0.1, #Fermi temperature\n              symmetry=True,\n              dipole={\'status\':True,\n                      \'mixpar\':0.2,\n                      \'initval\':0.0},\n              ncoutput={\'wf\':\'No\',\n                        \'cd\':\'No\',\n                        \'efp\':\'No\',\n                        \'esp\':\'No\'},\n              convergence={\'energy\':0.00001,\n                           \'density\':0.00000001,\n                           \'occupation\':0.001,\n                           \'maxsteps\':None,\n                           \'maxtime\':None},\n              spinpol=False,\n              stay_alive=True,\n             )\ncalc.set(psp={\'sym\':\'Pb\',\'psp\':\'/home/camp/anpet/common/uspp/pb_ps.uspp\'})\ncalc.set(psp={\'sym\':\'Tl\',\'psp\':\'/home/camp/anpet/common/uspp/tl_ps.uspp\'})\n\nslab.set_calculator(calc)\n\ndyn = QuasiNewton(slab,logfile=\'out.log\',trajectory=\'out.traj\')\ndyn.run(fmax=0.01)\n\ne_adsorbed = slab.get_potential_energy()\nprint e_adsorbed\n\nf = open(name + \'.energy\',\'w\')\nf.write(str(e_adsorbed))\nf.close()\n\n\n# Calculate vibrations\nvib = Vibrations(slab,indices=vibrateatoms)\nvib.run()\nvib.summary(method=\'standard\')\n\n# Make trajectory files to visualize the modes.\nfor mode in range(len(vibrateatoms)*3):\n    vib.write_mode(mode)\n\n\n'
+p22
+sS'path'
+p23
+S'/home/camp/anpet/20100914_Cu_100_101/Cu100/HCO_ads/hollow5'
+p24
+s.

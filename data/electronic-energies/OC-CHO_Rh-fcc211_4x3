@@ -1,0 +1,39 @@
+(dp0
+S'path'
+p1
+S'/a/suncatfs1/u1/montoyjh/MAIN/PAR_NEB/CHOCO/metals'
+p2
+sS'electronic energy'
+p3
+cnumpy.core.multiarray
+scalar
+p4
+(cnumpy
+dtype
+p5
+(S'f8'
+p6
+I0
+I1
+tp7
+Rp8
+(I3
+S'<'
+p9
+NNNI-1
+I-1
+I0
+tp10
+bS'\x92\xca\x92\xed\x15\xf8\xde\xc0'
+p11
+tp12
+Rp13
+sS'calculation script'
+p14
+S'standard fbl relax'
+p15
+sS'author'
+p16
+S'JHM'
+p17
+s.

@@ -1,0 +1,379 @@
+#!/usr/bin/env python
+
+from hori import io
+from ase.thermochemistry import IdealGasThermo, HarmonicThermo
+
+def gas_chemical_potential(species,temperature,fugacity):
+    """For a gas, given its temperature (K) and fugacity (Pa), returns
+    its chemical potential."""
+    if not gasprops.has_key(species):
+        raise RuntimeError('Data for this gas (%s) is not in gasprops'
+                           'dictionary. Add to hori.thermo.gasprops' %
+                          species)
+
+    d = io.gasdata(species)
+    p = gasprops[species]
+    electronic_energy = (d['electronic energy'] +
+                         p['electronic energy correction'])
+    thermo = IdealGasThermo(vib_energies=d['vibrations'],
+                            electronicenergy=electronic_energy,
+                            geometry=p['geometry'],
+                            atoms=d['atoms'],
+                            symmetrynumber=p['symmetrynumber'],
+                            spin=p['spin'])
+    mu = thermo.get_free_energy(temperature=temperature,pressure=fugacity)
+    return mu
+
+class ProtonElectronThermodynamics:
+    """Class that loads the chemical potential data for the proton-electron
+    pair in the Computational Hydrogen Electrode model, meaning that it
+    uses the thermodynamic properties of H2 gas at 1 atm and adjusts them
+    for temperature and voltage. In this module, the voltage is verus RHE,
+    so a pH correction is not needed.
+
+    Instantiate with the temperature and voltage, and the chemical
+    potential of the proton-electron pair is automatically calculated and
+    stored in self.G. Similarly, after changing the temperature or
+    voltage with the .set_temperature or .set_voltage method, self.G
+    is auto-recalculated.
+
+    Temperature is in K and voltage is in V vs RHE.
+    """
+
+    def __init__(self,temperature,voltage):
+        self.temperature = temperature
+        self.voltage = voltage
+        d = io.gasdata('H2') # hydrogen electrode
+        d['electronic energy correction'] = \
+                    gasprops['H2']['electronic energy correction']
+        d['geometry'] = gasprops['H2']['geometry']
+        d['symmetrynumber'] = gasprops['H2']['symmetrynumber']
+        d['spin'] = gasprops['H2']['spin']
+        self.referencepressure = 101325. # Pa, RHE definition
+        self._previous = {'temperature':None,'voltage':None}
+        thermo = IdealGasThermo(vib_energies=d['vibrations'],
+                                electronicenergy=(d['electronic energy'] +
+                                       d['electronic energy correction']),
+                                geometry=d['geometry'],
+                                atoms=d['atoms'],
+                                symmetrynumber=d['symmetrynumber'],
+                                spin=d['spin'])
+        self._thermo = thermo
+        self._calculate_G()
+
+    def set_temperature(self,temperature):
+        """Change the temperature (K)."""
+        self._previous['temperature'] = self.temperature
+        self.temperature = temperature
+        self._calculate_G()
+
+    def set_voltage(self,voltage):
+        """Change the potential (V vs RHE)."""
+        self._previous['voltage'] = self.voltage
+        self.voltage = voltage
+        self._calculate_G()
+
+    def _calculate_G(self):
+        """Calculates the free energy of the proton-electron pair. Only
+        recalculates those portions that would change."""
+        if self.temperature != self._previous['temperature']:
+            self._G_H2 = self._thermo.get_free_energy(self.temperature, 
+                                        self.referencepressure, 
+                                        verbose=False) 
+        if self.voltage != self._previous['voltage']:
+            self._eU = 1. * self.voltage
+        self.G = 0.5 * self._G_H2 - self._eU
+
+class AdsorbateThermodynamics:
+    """Class that loads adsorbate free energy data for a list of adsorbates
+    and has methods to report back thermodynamic properties of the list as
+    a function of the temperature and the electronic energy (without
+    needing to re-access the data stored on disk). Initialize with
+    ads_list, which is a list of adsorbates and their electronic energies.
+    These electronic energies can later be changed with the
+    set_electronic_energies() method.
+
+        [ [adsorbate name, electronic_energy], ... ]
+
+    The adsorbate name should be something like 'COOH'. Use '' to indicate
+    the clean slab. The other inputs are the temperature (in K) and a
+    dictionary of hydrogen-bond stabilizations by the water overlayer, of
+    the form hbond_dict[adsorbate] = float (in eV).
+
+    After instantiating this class or changing an electronic energy or the
+    temperature, the class auto-recalculates, so a free energy can just be
+    pulled with self.G[ads]
+
+    If vibrations mode is set to 'generic', then it uses the generic
+    vibrations (that do not change with what metal the adsorbate is on).
+    If vibrations mode is set to 'specific', then it will look for specific
+    vibrations for the adsorbate/surface pair in the data folder, and raise
+    an error if one is not found. If vibrations mode is set to 'automatic',
+    then it will first look for a specific vibration, then default to
+    generic if one is not found.
+
+    Note that changing the vibrations is not actually implemented. Should I
+    make this so that the vibrations mode is set per adsorbate?
+    """
+
+    def __init__(self, ads_list, temperature, hbond_dict=None, 
+                 vibrations='generic'):
+        if vibrations != 'generic':
+            raise NotImplementedError('Only generic vibrations supported.')
+        else:
+            self.vibs = {}
+            self._elec_energy = {}
+            if hbond_dict:
+                self._hbond = hbond_dict
+                print('hbond_dict specified.')
+            else:
+                self._hbond = {}
+                print('hbond_dict not specified.')
+            for ads, elec_energy in ads_list:
+                if ads == '': # clean slab
+                    self.vibs[ads] = []
+                else:
+                    self.vibs[ads] = io.genericvibrations(ads)
+                self._elec_energy[ads] = elec_energy
+                if hbond_dict == None:
+                    self._hbond[ads] = 0.
+        self.temperature = temperature
+        self._Gcorr = {}
+        self.G = {}
+        for ads in [item[0] for item in ads_list]:
+            self._calculate_Gcorr(ads)
+            self._calculate_G(ads)
+
+    def _calculate_Gcorr(self,adsorbate,verbose=False):
+        """Re-calculates the G_correction for the specified adsorbate. Note
+        since only harmonic degrees of freedom are considered and the clean
+        slab is considered to be static (i.e., its vibrations are
+        unaffected by the presence of the adsorbate), then its G correction
+        is 0."""
+        if adsorbate == '':
+            self._Gcorr[adsorbate] = 0.
+        else:
+            thermo = HarmonicThermo(vib_energies=self.vibs[adsorbate],
+                                    electronicenergy=None)
+            self._Gcorr[adsorbate] = thermo.get_free_energy(temperature=
+                                        self.temperature,verbose=verbose)
+
+    def _calculate_G(self,adsorbate,verbose=False):
+        """Recalculates the free energy for an adsorbate from
+        pre-calculated parameters."""
+        self.G[adsorbate] = (self._elec_energy[adsorbate] + 
+                             self._Gcorr[adsorbate] +
+                             self._hbond[adsorbate])
+        if verbose:
+            fmt = '%20s%13.3f eV'
+            print('='*36)
+            print('Contributions to G for %s' % adsorbate)
+            print('-'*36)
+            print(fmt % ('Electronic energy',self._elec_energy[adsorbate]))
+            print(fmt % ('Hydrogen bonding',self._hbond[adsorbate]))
+            print(fmt % ('E -> G', self._Gcorr[adsorbate]))
+            print('-'*36)
+            print(fmt % ('G', self.G[adsorbate]))
+            print('='*36)
+
+    def _scale_E(self,adsorbate,reference,fxn):
+        """Provides a scaled value of the electronic energy. adsorbate is
+        the name of an adsorbate (e.g., 'COOH') and reference is the name
+        of the reference (e.g., 'CH3'). fxn is the function that links the
+        two, as in:
+            E[adsorbate] = fxn(E[reference])
+        it is assumed that fxn uses referenced values for all energies,
+        that is E = E_elec[ads*] - E_elec[*] - E_ref(ads)
+        where E_ref is the atomic reference energies of the adsorbate.
+        Returns the adsorbate energy with normal reference, 
+        e.g., -55232.24 eV.
+        Note that the electronic energy of the reference should be already
+        set before this function is called.
+        """
+        #FIXME: this function is so far only used within an external
+        # script, I may want to change the approach and delete it, for
+        # example if I change the reference to pull out the atomic
+        # normalizing (I need to leave in the clean slab normalizing).
+        x = (self._elec_energy[reference] 
+             - io.electronicenergy(self._surface)
+             - calculate_reference_energ(referenc))
+        y = fxn(x)
+        self._elec_energy[adsorbate] = y + \
+             io.electronicenergy(self._surface) + \
+             calculate_reference_energy(adsorbate)
+
+    def set_temperature(self,temperature):
+        """Sets the temperature (K) for adsorbate free energy calcs."""
+        self.temperature = temperature
+        for ads in self.G.keys():
+            self._calculate_Gcorr(ads)
+            self._calculate_G(ads)
+
+    def set_electronic_energy(self, adsorbate, elec_energy):
+        """Sets the electronic energy (eV) for the specified adsorbate and
+        re-calculates G."""
+        self._elec_energy[adsorbate] = elec_energy
+        self._calculate_G(adsorbate)
+
+    def set_energies_by_metal(self, metal):
+        """Looks up the electronic energies for each adsorbate on the metal
+        specified using the io functions of the hori module, assigns them,
+        and re-calculates G."""
+        for ads in self.G.keys():
+            self._elec_energy[ads] = io.electronicenergy(surface=metal,
+                                                         adsorbate=ads)
+            self._calculate_G(ads)
+        self._surface = metal
+
+    def print_thermodynamic_contributions(self,ads_list='all'):
+        """Prints the contributions to U,S,G for each adsorbate in ads_list
+        at the current conditions.  If gas_list is 'all', then prints for 
+        all gases. Note that this forces a re-calculation -- if any
+        parameters have changed, then what is reported will be for those
+        new values.
+        """
+        print('='*75)
+        print('Thermodynamic contributions for adsorbates:')
+        print('-'*75)
+        if ads_list == 'all':
+            ads_list = self.G.keys()
+        for ads in ads_list:
+            print('*'*70)
+            print(ads)
+            print('*'*70)
+            if ads == '':
+                print('No G-correction for clean slab.')
+                print('Electronic energy: %.3f eV' % self._elec_energy[''])
+                print('Free energy:       %.3f eV' % self.G[''])
+            else:
+                self._calculate_Gcorr(ads,verbose=True)
+                self._calculate_G(ads,verbose=True)
+            print('\n\n')
+        print('='*75)
+
+
+
+
+class GasThermodynamics:
+    """Class that loads gas chemical potential data for a list of gases,
+    and has methods to report back thermodynamic properties of the list
+    of gases as a function of temperature and fugacity (without needing
+    to re-access the data stored on disk.
+    
+    Initialize with gas_list, which is a list of gases and their
+    corresponding temperature and pressure (fugacity), of the form:
+
+        [ [gas_name, temperature, fugacity], ... ]
+    
+    After instantiating this class or changing a temperature or pressure,
+    this class auto-recalculates, so a free energy can just be pulled with
+    self.G[gas]
+    """
+
+    def __init__(self,gas_list):
+        gas_dict = {}
+        for gas,temperature,fugacity in gas_list:
+            gas_dict[gas] = io.gasdata(gas)
+            if not gasprops.has_key(gas):
+                raise RuntimeError('Data for this gas (%s) is not in '
+                                   'gasprops dictionary. Add to '
+                                   'hori.thermo.gasprops' % gas)
+            gas_dict[gas]['geometry'] = gasprops[gas]['geometry']
+            gas_dict[gas]['symmetrynumber'] = \
+                    gasprops[gas]['symmetrynumber']
+            gas_dict[gas]['spin'] = gasprops[gas]['spin']
+            gas_dict[gas]['electronic energy correction'] = \
+                    gasprops[gas]['electronic energy correction']
+            gas_dict[gas]['temperature'] = temperature
+            gas_dict[gas]['fugacity'] = fugacity
+        self.gas_dict = gas_dict
+        self.G = {}
+        self._calculate_all_Gs()
+
+    def _calculate_one_G(self,gas,verbose=False):
+        d = self.gas_dict[gas]
+        thermo = IdealGasThermo(vib_energies=d['vibrations'],
+                                electronicenergy=(d['electronic energy'] +
+                                       d['electronic energy correction']),
+                                geometry=d['geometry'],
+                                atoms=d['atoms'],
+                                symmetrynumber=d['symmetrynumber'],
+                                spin=d['spin'])
+        self.G[gas] = thermo.get_free_energy(d['temperature'], 
+                                             d['fugacity'],verbose=verbose)
+
+    def _calculate_all_Gs(self):
+        for gas in self.gas_dict.keys():
+            self._calculate_one_G(gas)
+
+    def set_gas_temperature(self,gas,temperature):
+        """Change the temperature of an individual gas."""
+        self.gas_dict[gas]['temperature'] = temperature
+        self._calculate_one_G(gas)
+
+    def set_gas_fugacity(self,gas,fugacity):
+        """Change the fugacity of an individual gas."""
+        self.gas_dict[gas]['fugacity'] = fugacity
+        self._calculate_one_G(gas)
+
+    def set_all_temperatures(self,temperature):
+        """Set the temperature of all gases to the same value."""
+        for gas in self.gas_dict.keys():
+            self.gas_dict[gas]['temperature'] = temperature
+        self._calculate_all_Gs()
+
+    def set_all_fugacities(self,fugacity):
+        """Set the fugacity of all gases to the same value."""
+        for gas in self.gas_dict.keys():
+            self.gas_dict[gas]['fugacity'] = fugacity 
+        self._calculate_all_Gs()
+
+    def print_thermodynamic_contributions(self,gas_list='all'):
+        """Prints the contributions to H,S,G for each gas in gas_list at
+        the current conditions.  If gas_list is 'all', then prints for all 
+        gases.
+        """
+        if gas_list == 'all':
+            gas_list = self.gas_dict.keys()
+        for gas in gas_list:
+            print('*'*60)
+            print(gas)
+            print('*'*60)
+            print('Electronic energy contains %+.3f eV correction.' %
+                  self.gas_dict[gas]['electronic energy correction'])
+            self._calculate_one_G(gas=gas,verbose=True)
+            print('\n\n')
+                            
+
+
+# Immutable gas properties follow.
+gasprops = {
+    'CO2':{'geometry':'linear',
+           'symmetrynumber':2,
+           'spin':0,
+           'electronic energy correction':+0.45},
+    'CH4':{'geometry':'nonlinear',
+           'symmetrynumber':12,
+           'spin':0,
+           'electronic energy correction':+0.00},
+    'H2': {'geometry':'linear',
+           'symmetrynumber':2,
+           'spin':0,
+           'electronic energy correction':+0.00},
+    'HCOOH' : {'geometry':'nonlinear',
+               'symmetrynumber':1.,
+               'spin':0.,
+               'electronic energy correction':+0.45},
+    'CO' : {'geometry':'linear',
+            'symmetrynumber':1.,
+            'spin':0.,
+            'electronic energy correction':+0.00},
+    'H2O' : {'geometry':'nonlinear',
+             'symmetrynumber':2.,
+             'spin':0.,
+             'electronic energy correction':+0.00},
+    'CH2O' : {'geometry' : 'nonlinear',
+              'symmetrynumber' : 2.,
+              'spin' : 0.,
+              'electronic energy correction' : +0.00},
+}

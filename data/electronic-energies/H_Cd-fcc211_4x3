@@ -1,0 +1,35 @@
+(dp0
+S'note'
+p1
+S'calculated by taking 3x3 ee, subtracting 3x3 slab ee,          and adding 4x3 slab ee'
+p2
+sS'electronic energy'
+p3
+cnumpy.core.multiarray
+scalar
+p4
+(cnumpy
+dtype
+p5
+(S'f8'
+p6
+I0
+I1
+tp7
+Rp8
+(I3
+S'<'
+p9
+NNNI-1
+I-1
+I0
+tp10
+bS' M\xff\x95\xb5y\xeb\xc0'
+p11
+tp12
+Rp13
+sS'author'
+p14
+S'JHM'
+p15
+s.

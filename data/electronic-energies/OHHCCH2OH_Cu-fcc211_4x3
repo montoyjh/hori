@@ -1,0 +1,19 @@
+(dp0
+S'path'
+p1
+S'/a/suncatfs1/u1/montoyjh/MAIN/PAR_NEB/glyoxal_red/OHHCCH2OH/H'
+p2
+sS'remark'
+p3
+NsS'electronic energy'
+p4
+F-61524.945430699998
+sS'calculation script'
+p5
+S"#!/usr/bin/env python\n\n#LSF -q suncat3-long\n#LSF -n 16\n#LSF -e stderror\n#LSF -o stdout\n#LSF -sp 95\n#LSF -N\n#LSF -u slacbsub@gmail.com\n\nfrom ase.io import read, write\nfrom ase.constraints import FixAtoms\nfrom ase.calculators.emt import EMT\nfrom ase.neb import NEB\nfrom ase.optimize import QuasiNewton\nfrom ase.visualize import view\nfrom ase.calculators.jacapo import Jacapo\n\ncalc = Jacapo(nc='out.nc', #nc output file\n              pw=340.15, #planewave cutoff\n              dw=500.00, #density cutoff\n              nbands=None, # number of bands\n              kpts=(4,4,1), # k points\n              xc='RPBE', #exchange correlation method\n              ft=0.1, #Fermi temperature\n              symmetry=True,\n              dipole={'status':True,\n                      'mixpar':0.2,\n                      'initval':0.0},\n              ncoutput={'wf':'No',\n                        'cd':'No',\n                        'efp':'No',\n                        'esp':'No'},\n              convergence={'energy':0.00001,\n                           'density':0.0001,\n                           'occupation':0.001,\n                           'maxsteps':None,\n                           'maxtime':None},\n              spinpol=False,\n              stay_alive=True,\n             )\n\ninitial = read('initial.traj')\ninitial.set_calculator(calc)\nmask = [atom.tag == 0 for atom in initial]\ninitial.set_constraint(FixAtoms(mask = mask))\n\nqn = QuasiNewton(initial, logfile='initial.log', trajectory='initRELAX.traj')\nqn.run(fmax=0.05)\n\n\ne0 = initial.get_potential_energy()\nf = open('out.energy','w')\nf.write(str(e0))\nf.close()\n"
+p6
+sS'author'
+p7
+S'AAP'
+p8
+s.

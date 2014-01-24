@@ -1,0 +1,19 @@
+(dp0
+S'path'
+p1
+S'/home/camp/anpet/20091016_Cu_adsorptions/slabsalone/kpts441'
+p2
+sS'remark'
+p3
+NsS'electronic energy'
+p4
+F-45195.300406299997
+sS'calculation script'
+p5
+S"#!/usr/bin/env python\n\n#PBS -q verylong\n#PBS -r n\n#PBS -l nodes=1:ppn=8\n#PBS -m ae\n#PBS -M andypeterson@gmail.com\n#PBS -V\n\nfrom numpy import sqrt\n\nfrom ase import *\nfrom ase.calculators.jacapo import *\n\na = 3.710 # Cu lattice constant in Angstroms\nel = 'Cu'\ncell=[(a*(3/sqrt(2.)), 0, 0),\n      (0, sqrt(3.)*a, 0),\n      (0, 0, 5.0716185983827495*a)]\n\nslab = Atoms([Atom(el, ([ 0.000000,  0.000000,  0.000000]),tag=1),\n              Atom(el, ([ 0.333333,  0.000000,  0.000000]),tag=1),\n              Atom(el, ([ 0.666667,  0.000000,  0.000000]),tag=1),\n              Atom(el, ([ 0.166666,  0.666667, -0.040248]),tag=1),\n              Atom(el, ([ 0.500000,  0.666667, -0.040248]),tag=1),\n              Atom(el, ([ 0.833333,  0.666667, -0.040248]),tag=1),\n              Atom(el, ([ 0.000000,  0.333333, -0.080497]),tag=1),\n              Atom(el, ([ 0.333333,  0.333333, -0.080497]),tag=1),\n              Atom(el, ([ 0.666667,  0.333333, -0.080497]),tag=1),\n              Atom(el, ([ 0.166666,  0.000000, -0.120745]),tag=0),\n              Atom(el, ([ 0.500000,  0.000000, -0.120745]),tag=0),\n              Atom(el, ([ 0.833333,  0.000000, -0.120745]),tag=0),\n              Atom(el, ([ 0.000000,  0.666667, -0.160993]),tag=0),\n              Atom(el, ([ 0.333333,  0.666667, -0.160993]),tag=0),\n              Atom(el, ([ 0.666667,  0.666667, -0.160993]),tag=0),\n              Atom(el, ([ 0.166666,  0.333333, -0.201242]),tag=0),\n              Atom(el, ([ 0.500000,  0.333333, -0.201242]),tag=0),\n              Atom(el, ([ 0.833333,  0.333333, -0.201242]),tag=0),\n              Atom(el, ([ 0.000000,  0.000000, -0.241490]),tag=0),\n              Atom(el, ([ 0.333333,  0.000000, -0.241490]),tag=0),\n              Atom(el, ([ 0.666667,  0.000000, -0.241490]),tag=0),\n              Atom(el, ([ 0.166666,  0.666667, -0.281738]),tag=0),\n              Atom(el, ([ 0.500000,  0.666667, -0.281738]),tag=0),\n              Atom(el, ([ 0.833333,  0.666667, -0.281738]),tag=0),\n              Atom(el, ([ 0.000000,  0.333333, -0.321987]),tag=0),\n              Atom(el, ([ 0.333333,  0.333333, -0.321987]),tag=0),\n              Atom(el, ([ 0.666667,  0.333333, -0.321987]),tag=0)])\n\nslab.set_cell(cell,scale_atoms=True)\nmask=[atom.get_tag() == 0 for atom in slab]\nslab.set_constraint(FixAtoms(mask=mask))\n\ncalc = Jacapo(nc=el + '.nc', #nc output file\n              pw=340.15, #planewave cutoff\n              dw=500.00, #density cutoff\n              nbands=None, # number of bands (None=autocalculate)\n              kpts=(4,4,1), # k points\n              xc='RPBE', #exchange correlation method\n              ft=0.1, #Fermi temperature\n              symmetry=True,\n              dipole=True,\n              spinpol=False,\n              stay_alive=True\n             )\ncalc.set_convergence()\ncalc.set_dipole(status=True, mixpar=0.2, initval=0.0)\ncalc.set_psp(sym='Pb',psp='/home/camp/anpet/common/uspp/pb_ps.uspp')\n\nslab.set_calculator(calc)\n\ndyn = QuasiNewton(slab,logfile=el+'.log',trajectory=el+'.traj')\ndyn.run(fmax=0.05)\n\ne_slab = slab.get_potential_energy()\nprint e_slab\n\nf = open(el + '.energy','w')\nf.write(str(e_slab))\nf.close()\n\ncalc.strip()\n\n"
+p6
+sS'author'
+p7
+S'AAP'
+p8
+s.

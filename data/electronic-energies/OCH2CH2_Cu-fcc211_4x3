@@ -1,0 +1,19 @@
+(dp0
+S'path'
+p1
+S'/a/suncatfs1/u1/montoyjh/MAIN/PAR_NEB/ADSORBATES_2/OCH2CH2/VIB'
+p2
+sS'remark'
+p3
+NsS'electronic energy'
+p4
+F-61071.563537399998
+sS'calculation script'
+p5
+S"#LSF -q suncat-long\n#LSF -n 8\n#LSF -o std.out\n#LSF -e std.out\n#LSF -u montoyjh@stanford.edu\n\nfrom ase.vibrations import Vibrations\nfrom ase.io import read\nfrom ase.calculators.jacapo import Jacapo\n\ninitial=read('initRELAX.traj',index=-1)\ncalc=Jacapo(nc='out.nc',\n            pw=340.15,\n            dw=500.00,\n            nbands=None,\n            kpts=(4,4,1),\n            xc='RPBE',\n            ft=0.1,\n            symmetry=True,\n            dipole={'status':True,\n                    'mixpar':0.2,\n                    'initval':0.0},\n            ncoutput={'wf':'No',\n                      'cd':'No',\n                      'efp':'No',\n                      'esp':'No'},\n            convergence={'energy':0.00001,\n                         'density':0.0001,\n                         'occupation':0.001,\n                         'maxsteps':None,\n                         'maxtime':None},\n            spinpol=False,\n            stay_alive=True,\n           )\ninitial.set_calculator(calc)\n\nvib=Vibrations(initial, indices = range(36,43))\nvib.run()\nvib.summary()\n"
+p6
+sS'author'
+p7
+S'AAP'
+p8
+s.

@@ -1,0 +1,19 @@
+(dp0
+S'path'
+p1
+S'/home/camp/anpet/20100914_Cu_100_101/Cu100/slab'
+p2
+sS'remark'
+p3
+NsS'electronic energy'
+p4
+F-60261.659142099998
+sS'calculation script'
+p5
+S'#!/usr/bin/env python\n\n#PBS -q verylong\n#PBS -r n\n#PBS -l nodes=1:ppn=8\n#PBS -m a\n#PBS -M andypeterson@gmail.com\n#PBS -V\n\nfrom ase import read,view,FixAtoms,QuasiNewton\nfrom ase.calculators.jacapo import Jacapo\nfrom ase.vibrations import Vibrations\n\n\n# Open a trajectory with C on top, then pop off the C.\nname = "Cu100"\nfreeatoms = [27,28,29,30,31,32,33,34,35] # For optimization calculation\n\n# Open the slab with adsorbate from an old simulation.\nslab = read(\'C_ontop.traj\')\nslab.pop(36)\n\n# Fix the atoms to not be optimized, give the rest random perturbations\n# to break any artificial symmetry.\nmask = [True for atom in slab]\nfor free in freeatoms: # free atoms for optimizer\n    mask[free] = False\nslab.set_constraint(FixAtoms(mask=mask))\n\n# Introduce random perturbations to the free atoms\n# NOTE: I removed this since it is not a standard part of ASE\n# but is a personal part of the code in AAP\'s modules\n#perturbfreeatoms(atoms=slab,max=0.05)\n\ncalc = Jacapo(nc=\'out.nc\', #nc output file\n              pw=340.15, #planewave cutoff\n              dw=500.00, #density cutoff\n              nbands=None, # number of bands\n              kpts=(4,4,1), # k points\n              xc=\'RPBE\', #exchange correlation method\n              ft=0.1, #Fermi temperature\n              symmetry=True,\n              dipole={\'status\':True,\n                      \'mixpar\':0.2,\n                      \'initval\':0.0},\n              ncoutput={\'wf\':\'No\',\n                        \'cd\':\'No\',\n                        \'efp\':\'No\',\n                        \'esp\':\'No\'},\n              convergence={\'energy\':0.00001,\n                           \'density\':0.0001,\n                           \'occupation\':0.001,\n                           \'maxsteps\':None,\n                           \'maxtime\':None},\n              spinpol=False,\n              stay_alive=True,\n             )\ncalc.set(psp={\'sym\':\'Pb\',\'psp\':\'/home/camp/anpet/common/uspp/pb_ps.uspp\'})\ncalc.set(psp={\'sym\':\'Tl\',\'psp\':\'/home/camp/anpet/common/uspp/tl_ps.uspp\'})\n\nslab.set_calculator(calc)\n\ndyn = QuasiNewton(slab,logfile=\'out.log\',trajectory=\'out.traj\')\ndyn.run(fmax=0.05)\n\ne_adsorbed = slab.get_potential_energy()\nprint e_adsorbed\n\nf = open(name + \'.energy\',\'w\')\nf.write(str(e_adsorbed))\nf.close()\n\n'
+p6
+sS'author'
+p7
+S'AAP'
+p8
+s.

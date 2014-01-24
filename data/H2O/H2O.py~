@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+#LSF -q suncat-medium -o opt.log -n 16
+
+import numpy as np
+from ase import io
+from ase import Atom, Atoms
+from ase.constraints import FixAtoms
+from ase.calculators.jacapo import Jacapo
+from ase.optimize import QuasiNewton
+from ase.data.molecules import molecule
+from ase import units
+from ase.io.trajectory import PickleTrajectory
+from ase.vibrations import Vibrations
+from ase.thermochemistry import HarmonicThermo, IdealGasThermo
+
+m = 0.0
+a = 20.0
+c = a/2
+d = 1.0
+
+atoms = Atoms('H2O',positions=([c - d / 2, c, c],[c + d, c, c],[c,c,c - d]),cell=(a,a,a))
+
+atoms.write('input.traj')
+
+calc = Jacapo(nc='out.nc', 
+              pw=340.15, 
+              dw=500.00,
+              kpts=(1,1,1),
+              xc='RPBE', 
+              ft=0.01, 
+              nbands=10,
+              spinpol=False,
+              ncoutput={'wf':'No',
+                        'cd':'No',
+                        'efp':'No',
+                        'esp':'No'},
+              dipole={'status':True,
+                      'mixpar':0.2,
+                      'initval':0.0},
+              )
+
+atoms.set_calculator(calc)
+
+dyn = QuasiNewton(atoms=atoms, logfile='qn.log', trajectory='qn.traj')
+
+dyn.run(fmax=0.03) # fmax?
+
+energy = atoms.get_potential_energy()
+
+vib = Vibrations(atoms,indices=[0,1,2],name='vib')
+vib.run()
+vibenergies=vib.get_energies()
+
+gibbs=IdealGasThermo(vibenergies,'nonlinear',electronicenergy=energy,atoms=atoms,symmetrynumber=2,spin=0.0)
+freeenergy=gibbs.get_free_energy(300,3570)
+
+f = open('out.energy','w')
+f.write(str(energy)+'\n'+str(freeenergy))
+f.close()

@@ -1,0 +1,83 @@
+Writing vib.eq.pckl
+Writing vib.0x-.pckl
+Writing vib.0x+.pckl
+Writing vib.0y-.pckl
+Writing vib.0y+.pckl
+Writing vib.0z-.pckl
+Writing vib.0z+.pckl
+Writing vib.1x-.pckl
+Writing vib.1x+.pckl
+Writing vib.1y-.pckl
+Writing vib.1y+.pckl
+Writing vib.1z-.pckl
+Writing vib.1z+.pckl
+Writing vib.2x-.pckl
+Writing vib.2x+.pckl
+Writing vib.2y-.pckl
+Writing vib.2y+.pckl
+Writing vib.2z-.pckl
+Writing vib.2z+.pckl
+Enthalpy components at T = 300.00 K:
+===============================
+E_elec              -469.728 eV
+E_ZPE                  0.580 eV
+Cv_trans (0->T)        0.039 eV
+Cv_rot (0->T)          0.039 eV
+Cv_vib (0->T)          0.000 eV
+(C_v -> C_p)           0.026 eV
+-------------------------------
+H                   -469.044 eV
+===============================
+
+Entropy components at T = 300.00 K and P = 3570.0 Pa:
+=================================================
+                           S               T*S
+S_trans (1 atm)    0.0015021 eV/K        0.451 eV
+S_rot              0.0004594 eV/K        0.138 eV
+S_elec             0.0000000 eV/K        0.000 eV
+S_vib              0.0000004 eV/K        0.000 eV
+S (1 atm -> P)     0.0002883 eV/K        0.086 eV
+-------------------------------------------------
+S                  0.0022502 eV/K        0.675 eV
+=================================================
+
+Free energy components at T = 300.00 K and P = 3570.0 Pa:
+=======================
+    H       -469.044 eV
+ -T*S         -0.675 eV
+-----------------------
+    G       -469.719 eV
+=======================
+
+------------------------------------------------------------
+Sender: LSF System <lsf@suncat0153>
+Subject: Job 687261: <H2O.py> Done
+
+Job <H2O.py> was submitted from host <suncatls1> by user <chuan>.
+Job was executed on host(s) <8*suncat0153>, in queue <suncat-medium>, as user <chuan>.
+                            <8*suncat0078>
+</u/if/chuan> was used as the home directory.
+</nfs/slac/g/suncatfs/chuan/test5/H2Omolecule> was used as the working directory.
+Started at Thu Jun 23 11:47:38 2011
+Results reported at Thu Jun 23 14:36:30 2011
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+H2O.py
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time   :      4.38 sec.
+    Max Memory :        22 MB
+    Max Swap   :       380 MB
+
+    Max Processes  :         5
+    Max Threads    :         5
+
+The output (if any) is above this job summary.
+

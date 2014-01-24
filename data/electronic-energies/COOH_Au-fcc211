@@ -1,0 +1,17 @@
+(dp0
+S'path'
+p1
+S'/home/camp/anpet/20091002_AuCdPbZn_adsorptions/COOH/Au/runs/L'
+p2
+sS'electronic energy'
+p3
+F-38569.972067100003
+sS'calculation script'
+p4
+S"#!/usr/bin/env python\n\n#PBS -q verylong\n#PBS -r n\n#PBS -l nodes=1:ppn=8\n#PBS -m a\n#PBS -M andypeterson@gmail.com\n#PBS -V\n\nfrom numpy import sqrt\nfrom numpy import arctan as atan\n\nfrom ase import *\nfrom ase.calculators.jacapo import Jacapo\nfrom ase.vibrations import Vibrations\n\n\n# Open the optimized structure from the previous simulation.\n\nslab = read('/home/camp/anpet/20091002_AuCdPbZn_adsorptions/slabsalone/kpts441/runs/Au/Au.traj')\ncell = slab.get_cell()\ncell = [cell[0,0], cell[1,1], cell[2,2]]\n\n# Build the adsorbate\nb = slab[1].get_x()\ns_CO = 1.43 # A, C-O bond length\ns_OH = 0.94 # A, O-H bond length\nd_CO = 1.217 # A, C=O bond length\nads = Atoms([Atom('C',[0.0,0.0,0.0],tag=1),\n             Atom('O',[d_CO/sqrt(2),0.0,d_CO/sqrt(2)],tag=1),\n             Atom('O',[-s_CO/sqrt(2),0.0,s_CO/sqrt(2)],tag=1),\n             Atom('H',[-s_CO/sqrt(2),0.0,s_CO/sqrt(2)+s_OH],tag=1),\n            ])\n\nfor atom in ads:\n    atom.set_tag(1)\n\ngap = slab[1].get_x()/2.\ngapy = - (cell[1] - slab[3].get_y())/2.\n\n\n# Custom translation or rotation parameters\nads[3].set_position([ads[2].get_x()-0.4,0.,(ads[0].get_z()+ads[2].get_z())/2.])\nads.rotate('z',pi/2.)\nads.translate([2*gap,0.,slab[0].get_z()+2.])\n\n# Add the adsorbate to the slab.\nads.rattle()\nfor atom in ads:\n    slab.append(atom)\n\nmask=[atom.get_tag() == 0 for atom in slab]\nslab.set_constraint(FixAtoms(mask=mask))\n\n\ncalc = Jacapo(nc='out.nc', #nc output file\n              pw=340.15, #planewave cutoff\n              dw=500.00, #density cutoff\n              nbands=None, # number of bands\n              kpts=(4,4,1), # k points\n              xc='RPBE', #exchange correlation method\n              ft=0.1, #Fermi temperature\n              symmetry=True,\n              dipole=True,\n              spinpol=False,\n              stay_alive=True\n             )\ncalc.set_convergence()\ncalc.set_dipole(status=True, mixpar=0.2, initval=0.0)\ncalc.set_psp(sym='Pb',psp='/home/camp/anpet/common/uspp/pb_ps.uspp')\n\nslab.set_calculator(calc)\n\ndyn = QuasiNewton(slab,logfile='qn.log',trajectory='qn.traj')\ndyn.run(fmax=0.05)\n\n\ne_adsorbed = slab.get_potential_energy()\nprint e_adsorbed\n\n\nf = open('out.energy','w')\nf.write(str(e_adsorbed))\nf.close()\n\n"
+p5
+sS'author'
+p6
+S'AAP'
+p7
+s.

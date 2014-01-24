@@ -1,0 +1,19 @@
+(dp0
+S'path'
+p1
+S'/a/suncatfs1/u1/montoyjh/MAIN/PAR_NEB/glyoxal_red/BEEF/4x3_bare'
+p2
+sS'remark'
+p3
+NsS'electronic energy'
+p4
+F-60260.456398599999
+sS'calculation script'
+p5
+S"#LSF -q suncat-long\n#LSF -n 16\n#LSF -e stderror\n#LSF -o stdout\n\nfrom ase.all import *\n\nfrom numpy import sqrt\nfrom numpy import arctan as atan\n\nfrom gpaw import GPAW,Mixer,FermiDirac\nfrom gpaw.poisson import PoissonSolver\nfrom gpaw.dipole_correction import DipoleCorrection\n##################\n# Slab ###########\n##################\nslab = read('Cu-fcc211_4x3_relaxed.traj')\nslab.set_pbc([1,1,0])\n\nslab.center(vacuum=10.0,axis=2)\n#view(slab)\n#blargh\ncalc = GPAW(h = 0.18,\n            xc = 'BEEF-vdW',\n            kpts = (3,4,1),\n            eigensolver = 'dav',\n            mixer = Mixer(beta = 0.05,nmaxold=5,weight=50),\n            occupations = FermiDirac(0.03),\n            maxiter = 400,\n            spinpol=False,\n            poissonsolver=DipoleCorrection(PoissonSolver(),2),\n            txt = 'beefcake.out')\n\nslab.set_calculator(calc)\ndyn = QuasiNewton(slab,trajectory = 'Cu_bare_4x3_beef.traj',logfile = 'qn.log')\ndyn.run(fmax=0.05)\n\n"
+p6
+sS'author'
+p7
+S'AAP'
+p8
+s.
