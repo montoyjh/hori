@@ -81,14 +81,21 @@ class PlotStates:
                          fontsize=self._fontsize,
                          horizontalalignment='center',
                          verticalalignment='center',
-                         color=color,
-                         backgroundcolor='w')
+                         color=color)
+                         #backgroundcolor='w')
         elif self._textposition == 'above':
             self.ax.text(zone, self._G[state] + self._text_vspace, label,
                          fontsize=self._fontsize,
                          horizontalalignment='center',
                          verticalalignment='bottom',
                          color=color)
+        elif self._textposition == 'below':
+            self.ax.text(zone, self._G[state] + -self._text_vspace, label,
+                         fontsize=self._fontsize,
+                         horizontalalignment='center',
+                         verticalalignment='top',
+                         color=color)
+
         elif self._textposition == 'slant':
             self.ax.text(zone-self._halfwidth*0.8, self._G[state]+self._text_vspace, label,
                          fontsize=self._fontsize,

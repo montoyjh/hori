@@ -15,7 +15,7 @@ def set_directory(path):
     directory specified must have subdirectories 'electronic-energies',
     and/or 'generic-vibrations', depending on the data to be accessed.
     """
-    global datapath
+    global datapath 
     datapath = path
 
 def get_directory():

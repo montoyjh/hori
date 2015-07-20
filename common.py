@@ -228,6 +228,7 @@ def hbond_dict_none():
          'CO'     : CO,
          'CHO'    : CO,
          'OCCOH'  : CO+ROH,
+         'OCCHO'  : 0.0,
          'COCOH'  : CO+ROH,
          'CH2O'   : 0.,
          'OCH3'   : 0.,
